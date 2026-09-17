@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Request Grid - 0/Any placements (production-matched)</title>
+<style>
+* { box-sizing: border-box; }
+body { margin:0; font-family: Roboto, Arial, sans-serif; font-size:13px; color:#333; background:#fff; }
+.page-header { display:flex; align-items:center; gap:6px; padding:10px 16px; font-size:13px; color:#555; border-bottom:1px solid #e0e0e0; }
+.page-header .current { color:#003179; font-weight:500; }
+.filter-panel-simple { display:flex; align-items:flex-end; gap:20px; padding:14px 16px; background:#fff; border-bottom:1px solid #eee; flex-wrap:wrap; }
+.filter-field-simple { display:flex; flex-direction:column; gap:2px; min-width:120px; }
+.filter-field-simple label { font-size:11px; color:#888; }
+.filter-field-simple select, .filter-field-simple input { border:none; border-bottom:1px solid #bbb; padding:6px 2px; font-family:inherit; font-size:13px; background:transparent; color:#003179; }
+.btn-refresh { height:34px; padding:0 20px; background:#003179; color:#fff; border:none; border-radius:4px; font-family:inherit; font-size:13px; font-weight:500; cursor:pointer; }
+.req-ctx-menu{position:fixed;z-index:2000;background:#fff;border-radius:4px;box-shadow:0 3px 1px -2px rgba(0,0,0,.2),0 2px 2px 0 rgba(0,0,0,.14),0 1px 5px 0 rgba(0,0,0,.12);min-width:200px;padding:8px 0;font-size:13px;}
+.req-ctx-menu-item{padding:10px 16px;cursor:pointer;color:#0050c7;}
+.req-ctx-menu-item:hover{background:#f5f5f5;}
+.req-ctx-menu-item.danger{color:#c62828;}
+.req-ctx-divider{height:1px;background:#eee;margin:6px 0;}
+#reqTooltip{position:fixed;z-index:2000;display:none;width:270px;background:#fff;border:1px solid #c7deff;border-radius:8px;box-shadow:0 4px 14px rgba(0,49,121,.15);padding:14px;font-size:12px;}
+#reqTooltip.visible{display:block;}
+#reqTooltip .tt-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+#reqTooltip .tt-id{font-weight:600;color:#003179;}
+#reqTooltip .tt-sbadge{font-size:10px;padding:2px 8px;border-radius:10px;background:#eeedfe;color:#534ab7;}
+#reqTooltip .tt-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;}
+#reqTooltip .tt-lbl{color:#888;}
+#reqTooltip .tt-val{font-weight:500;color:#00193e;text-align:right;}
+#reqTooltip .tt-progress{margin-top:10px;padding-top:8px;border-top:1px solid #eee;}
+#reqTooltip .tt-progress-bar{height:5px;border-radius:3px;background:#e5e7eb;overflow:hidden;margin:4px 0;}
+#reqTooltip .tt-progress-fill{display:block;height:100%;background:#1976d2;}
+#reqTooltip .tt-progress-labels{display:flex;justify-content:space-between;font-size:11px;color:#666;}
+.request-grid{display:flex;flex-direction:column;--page-shell: 240px;height:calc(100vh - var(--toolbar-height, 0px) - var(--page-shell));min-height:0;transition:height .18s ease}.request-grid.is-scrolled{--page-shell: 80px}.request-grid .filter-panel{transition:opacity .15s ease,max-height .18s ease,padding .15s ease,margin .15s ease;max-height:500px;overflow:hidden;will-change:max-height,opacity}.request-grid.is-scrolled .filter-panel{opacity:0;max-height:0;padding-top:0;padding-bottom:0;margin-top:0;margin-bottom:0;pointer-events:none}.request-grid .grid-count-indicator{padding:6px 16px;font-size:.8rem;color:#666;transition:opacity .15s ease,max-height .18s ease;max-height:48px;overflow:hidden;will-change:max-height,opacity;border-bottom:1px solid #e0e0e0}.request-grid.is-scrolled .grid-count-indicator{opacity:0;max-height:0;pointer-events:none;padding:0 16px}.request-grid .region-for .required label:after{content:""!important}.request-grid .region-for .mdc-floating-label--required:after{content:""!important}.request-grid .region-for.needs-region .mat-mdc-form-field-flex,.request-grid .region-for.needs-region .mat-mdc-text-field-wrapper{background-color:#eff5ff!important}.request-grid .region-for.needs-region .mdc-notched-outline__leading,.request-grid .region-for.needs-region .mdc-notched-outline__notch,.request-grid .region-for.needs-region .mdc-notched-outline__trailing{border-color:#a0c6ff!important}.request-grid.awaiting-region .filter-form .col-form:not(.region-for),.request-grid.awaiting-region .grid-toolbar{cursor:default;opacity:.5;pointer-events:none}.request-grid.awaiting-region app-base-filter-search .mat-mdc-form-field:not(.mat-form-field-disabled) .mat-mdc-floating-label.mdc-floating-label,.request-grid.awaiting-region app-base-filter-search button[mat-raised-button],.request-grid.awaiting-region app-base-filter-search button.button-link{cursor:default;opacity:.5;pointer-events:none}.request-grid .mat-button-toggle-group{border-radius:20px;overflow:hidden}.request-grid .mat-button-toggle-group .mat-button-toggle{font-size:.8rem;color:#666}.request-grid .mat-button-toggle-group .mat-button-toggle .mat-button-toggle-label-content{line-height:32px;padding:0 14px}.request-grid .mat-button-toggle-group .mat-button-toggle.mat-button-toggle-checked{background-color:#eff5ff!important;color:#0050c7}.request-grid .grid-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;flex-shrink:0;gap:12px;background:#fafafa;padding:16px;border:1px solid #fafafa;margin:-1px}.request-grid .grid-toolbar.awaiting-region{opacity:.55;pointer-events:none}.request-grid .grid-toolbar .toolbar-left,.request-grid .grid-toolbar .toolbar-right,.request-grid .grid-toolbar .density-control{display:flex;align-items:center;gap:8px}.request-grid .grid-toolbar .density-control .density-toggle .mat-button-toggle-label-content{line-height:32px;padding:0 10px}.request-grid .grid-toolbar .ep-balance-btn{display:inline-flex;align-items:center;gap:6px}.request-grid .grid-toolbar .ep-balance-btn .ep-balance-btn-icon{font-size:.875rem;margin:0 3px 0 -3px}.request-grid .grid-toolbar .ep-balance-btn.active{border-color:#2c7be5;color:#2c7be5;background-color:#2c7be514}.request-grid .grid-toolbar .toolbar-label{font-size:.75rem;color:#666;margin-left:8px}.request-grid .grid-toolbar .divider{width:1px;height:24px;background:#e0e0e0}.request-grid .grid-toolbar .show-control,.request-grid .grid-toolbar .group-by-control,.request-grid .grid-toolbar .view-control{display:flex;align-items:center;gap:8px}.request-grid .grid-toolbar .group-by-field{width:140px}.request-grid .grid-toolbar .group-by-field .mat-mdc-form-field-subscript-wrapper{display:none}.request-grid .grid-toolbar .group-by-field .mat-mdc-text-field-wrapper{padding:0 8px}.request-grid .grid-toolbar .group-by-field.is-none .mat-mdc-select-value,.request-grid .grid-toolbar .group-by-field.is-none .mat-mdc-select-value-text,.request-grid .grid-toolbar .group-by-field.is-none .mat-mdc-select-min-line{color:#666}.request-grid .grid-toolbar .expand-all-btn{display:inline-flex;align-items:center;gap:6px}.request-grid .grid-toolbar .rag-legend{display:flex;align-items:center;gap:12px;margin-right:4px}.request-grid .grid-toolbar .rag-leg-item{display:inline-flex;align-items:center;gap:5px;font-size:.67rem;color:#666}.request-grid .grid-toolbar .rag-leg-dot{width:11px;height:11px;border-radius:2px;flex-shrink:0}.request-grid .grid-toolbar .rag-leg-dot.rag-green{background:#2e7d322e}.request-grid .grid-toolbar .rag-leg-dot.rag-amber{background:#ef6c002e}.request-grid .grid-toolbar .rag-leg-dot.rag-red{background:#d32f2f2e}.request-grid .grid-toolbar button.show-chip{border:1px solid var(--mat-button-toggle-divider-color, var(--mat-sys-outline))!important;border-radius:20px!important;padding:0 14px!important;line-height:34px!important;background:#fff!important;color:#666!important;font-size:.875rem!important;cursor:pointer;min-width:0}.request-grid .grid-toolbar button.show-chip.is-on{color:#0050c7!important;background:#eff5ff!important}@media(max-width:768px){.request-grid .grid-toolbar{flex-direction:column;align-items:stretch;gap:16px}.request-grid .grid-toolbar .toolbar-left,.request-grid .grid-toolbar .toolbar-right{flex-wrap:wrap;gap:12px}}.request-grid .grid-placeholder{flex:1;display:flex;align-items:center;justify-content:center;color:#888;font-style:italic;padding:4rem 1rem}.request-grid .grid-table{border:1px solid #e0e0e0;padding:0 16px 16px;display:flex;flex-direction:column;flex:1 1 0;min-height:0}.request-grid .grid-row{display:grid;grid-template-columns:var(--first-col, 280px) repeat(var(--col-count),1fr);position:relative}@media(max-width:1024px){.request-grid .grid-row{--first-col: 170px}}@media(max-width:768px){.request-grid .grid-row{--first-col: 180px}}.request-grid .grid-row:before{content:"";position:absolute;top:0;bottom:0;left:var(--first-col, 280px);width:1px;background:#f0f0f0;pointer-events:none;z-index:2}.request-grid .grid-viewport{display:block;flex:1 1 0;min-height:320px;scrollbar-gutter:stable}.request-grid .grid-viewport .grid-row{height:24px;box-sizing:border-box}.request-grid .grid-viewport .row-agreement{height:auto}.request-grid .grid-viewport .cdk-virtual-scroll-content-wrapper{width:100%;max-width:100%}.request-grid .grid-cell{padding:5px 2px;border-bottom:1px solid #e8e8e8;border-right:1px solid #f0f0f0;font-size:.8rem;display:flex;align-items:center;overflow:hidden;box-sizing:border-box}.request-grid .grid-header{flex-shrink:0;overflow:hidden;scrollbar-gutter:stable}.request-grid .grid-header .grid-cell{position:sticky;top:0;z-index:2;background:#fafafa;border-bottom:2px solid #e0e0e0}.request-grid .agency-header{z-index:3!important;font-weight:600;font-size:.8rem;padding-left:8px;color:#003179}.request-grid .agency-cell{position:sticky;left:0;z-index:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;gap:4px;border-right:none}.request-grid .date-header{flex-direction:column;justify-content:center;text-align:center}.request-grid .date-header .date-primary{font-weight:600;font-size:.75rem;color:#003179}.request-grid .date-header .date-secondary{font-size:.67rem;color:#888}.request-grid .day-cell{justify-content:center}.request-grid .date-header.weekend,.request-grid .day-cell.weekend{background-color:#f3f3f3!important}.request-grid .row-request{box-sizing:border-box}.request-grid .row-request .grid-cell{background:#fafafa}.request-grid .row-request .day-cell.weekend{background-color:#f3f3f3}.request-grid .row-request .request-day-cell.clickable{cursor:pointer}.request-grid .row-request .request-cell{position:relative}.request-grid .row-request .request-row-actions{visibility:hidden;right:0;width:auto;background:#fafafa}.request-grid .row-request .request-row-actions .hover-grid-content{height:100%;align-items:center;gap:4px;padding-right:8px}.request-grid .row-request .request-row-actions .primary-action-button .mat-mdc-button-base{display:inline-flex;align-items:center;min-width:0!important;min-height:0!important;height:22px!important;padding:0 8px!important}.request-grid .row-request .request-row-actions .primary-action-button .mat-mdc-button-base .mdc-button__label{line-height:1;font-size:.75rem}.request-grid .row-request .request-row-actions .secondary-actions .mat-mdc-icon-button.mat-mdc-button-base{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;min-height:0;padding:0;margin:0;border-radius:4px;--mdc-icon-button-state-layer-size: 20px}.request-grid .row-request .request-row-actions .secondary-actions .mat-mdc-icon-button.mat-mdc-button-base .mat-mdc-button-touch-target{width:20px;height:20px}.request-grid .row-request .request-row-actions .secondary-actions .mat-mdc-icon-button.mat-mdc-button-base i{display:flex;align-items:center;justify-content:center;line-height:1;font-size:.75rem}.request-grid .row-request:hover .request-row-actions,.request-grid .row-request .request-row-actions:hover,.request-grid .row-request .request-row-actions:has([aria-expanded=true]){visibility:visible}.request-grid .row-request .request-label{display:flex;flex-direction:column;gap:2px;width:100%;font-size:.75rem;line-height:1.3}.request-grid .row-request .request-line-1{display:flex;align-items:center;gap:6px;width:100%;min-width:0}.request-grid .row-request .request-line-1-main{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.request-grid .row-request .request-date{color:#666}.request-grid .row-request .status-pill{flex:0 0 auto}.request-grid .row-request .request-badge{color:#003179;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}.request-grid .row-request .request-student{color:#003179}.request-grid .row-request .request-qty{color:#003179;font-weight:500}.request-grid .row-request .status-pill{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#eee;color:#555;font-size:.67rem;font-weight:500}.request-grid .row-request .status-pill.pending{color:#534ab7;background:#eeedfe}.request-grid .row-request .status-pill.offered{color:#92400e;background:#ffc10740}.request-grid .row-request .status-pill.published{color:#0369ff;background:#0369ff26}.request-grid .row-request .status-pill.allocated{color:#1565c0;background:#1565c01a}.request-grid .row-request .status-pill.completed{color:#2e7d32;background:#2e7d321a}.request-grid .row-request .status-pill.rejected,.request-grid .row-request .status-pill.withdrawn-hei,.request-grid .row-request .status-pill.withdrawn-student{color:#757575;background:#75757526}.request-grid .row-request .shift-badge{padding:1px 6px;border-radius:4px;color:#fff;font-size:.67rem;font-weight:500}.request-grid .row-request .shift-badge.shift-am{background:#1976d2}.request-grid .row-request .shift-badge.shift-pm{background:#7b1fa2}.request-grid .row-request .shift-badge.shift-full-day{background:#2e7d32}.request-grid .row-request .shift-badge.shift-all{background:#757575}.request-grid .row-request .shift-badge.shift-mixed{background:#ef6c00}.request-grid .row-request .request-day-cell.rag-green{background-color:#2e7d322e!important}.request-grid .row-request .request-day-cell.rag-amber{background-color:#ef6c002e!important}.request-grid .row-request .request-day-cell.rag-red{background-color:#d32f2f2e!important}.request-grid .row-request .request-day-cell.duration-border:nth-child(2){margin-left:1px}.request-grid .row-request .request-day-cell.duration-border{color:#7d7d7d;box-shadow:inset 0 2px 0 currentColor,inset 0 -2px 0 currentColor}.request-grid .row-request .request-day-cell.duration-border.rag-green{color:#1b5e20}.request-grid .row-request .request-day-cell.duration-border.rag-amber{color:#7f3b00}.request-grid .row-request .request-day-cell.duration-border.rag-red{color:#7f0000}.request-grid .row-request .request-day-cell.duration-border.duration-border-start{box-shadow:inset 0 2px 0 currentColor,inset 0 -2px 0 currentColor,inset 2px 0 0 currentColor}.request-grid .row-request .request-day-cell.duration-border.duration-border-end{box-shadow:inset 0 2px 0 currentColor,inset 0 -2px 0 currentColor,inset -2px 0 0 currentColor}.request-grid .row-request .request-day-cell.duration-border.duration-border-start.duration-border-end{box-shadow:inset 0 0 0 2px currentColor}.request-grid .row-request .request-chip{display:inline-block;max-width:100%;padding:1px 4px;border-radius:4px;font-size:.8rem;color:#003179;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.request-grid .row-region .agency-name,.request-grid .row-facility .agency-name,.request-grid .row-department .agency-name,.request-grid .row-ward .agency-name{font-weight:400}.request-grid .row-region .agency-name{font-weight:500}.request-grid .row-sub .grid-cell{background:#f3f8fd}.request-grid .row-sub .sub-name{font-size:.75rem;color:#666}.request-grid .row-ep-group{cursor:pointer}.request-grid .row-ep-group .toggle-btn{opacity:0;transition:opacity .12s ease}.request-grid .row-ep-group:hover .toggle-btn{opacity:1}.request-grid .row-ep-group .grid-cell{background:#eef2f7}.request-grid .row-ep-group .ep-group-cell.rag-green{background-color:#a5d6a7!important;color:#1b5e20}.request-grid .row-ep-group .ep-group-cell.rag-amber{background-color:#ffcc80!important;color:#7f3b00}.request-grid .row-ep-group .ep-group-cell.rag-red{background-color:#e57373!important;color:#7f0000}.request-grid .row-ep-group .ep-name{font-weight:500;color:#003179}.request-grid .row-ep-group .ep-count{margin-left:6px;color:#0050c7;font-size:.67rem;font-weight:500}.request-grid .row-ep-group .ep-day-count{font-size:.8rem;font-weight:600;color:#003179}.request-grid .row-campus-group{cursor:pointer}.request-grid .row-campus-group .toggle-btn{opacity:0;transition:opacity .12s ease}.request-grid .row-campus-group:hover .toggle-btn{opacity:1}.request-grid .row-campus-group .grid-cell{background:#f3f8fd}.request-grid .row-campus-group .ep-group-cell.rag-green{background-color:#a5d6a7!important;color:#1b5e20}.request-grid .row-campus-group .ep-group-cell.rag-amber{background-color:#ffcc80!important;color:#7f3b00}.request-grid .row-campus-group .ep-group-cell.rag-red{background-color:#e57373!important;color:#7f0000}.request-grid .row-campus-group .ep-day-count{font-size:.8rem;font-weight:600;color:#003179}.request-grid .row-campus-group .campus-name{font-weight:500;color:#003179}.request-grid .row-campus-group .ep-count{margin-left:6px;color:#0050c7;font-size:.67rem;font-weight:500}.request-grid .toggle-btn,.request-grid .toggle-spacer{width:18px;flex-shrink:0}.request-grid .toggle-btn{background:transparent;cursor:pointer;padding:2px;height:18px;width:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;border:none!important;color:#555!important;box-shadow:none!important}.request-grid .toggle-btn .fas{transition:transform .2s ease;font-size:.75rem}.request-grid .toggle-btn .fas.collapsed{transform:rotate(-90deg)}.request-grid .toggle-spacer{display:inline-block}.request-grid .toggle-disabled{opacity:.3;pointer-events:none;cursor:default}.request-grid .row-placements .grid-cell{background:#f9fbfd}.request-grid .row-placements .placements-cell{align-items:center;justify-content:space-between;gap:6px;border-left:3px solid #78afff}.request-grid .row-placements .placements-label{font-size:.8rem;font-weight:600;color:#003179}.request-grid .row-placements .placements-view{flex-shrink:0;opacity:0;transition:opacity .15s ease;gap:4px;min-width:0!important;height:22px!important;padding:0 8px!important;font-size:.75rem!important;line-height:1!important;white-space:nowrap}.request-grid .row-placements:hover .placements-view{opacity:1}.request-grid .row-placements .placement-day-cell{flex-direction:column;padding:0}.request-grid .row-placements .placement-lane{display:flex;align-items:center;justify-content:center;width:100%;height:20px;padding:2px 2px 0;overflow:hidden}.request-grid .row-placements .placement-chip{display:inline-block;max-width:100%;padding:0 5px;border-radius:4px;background:#e1f4f1;color:#003179;font-size:.8rem;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}.request-grid .agency-name{overflow:hidden;text-overflow:ellipsis;color:#003179}.request-grid .skeleton-row .grid-cell,.request-grid .skeleton-row .agency-cell{background:#fff}.request-grid .skeleton-bar{display:inline-block;height:15px;border-radius:4px;background:linear-gradient(90deg,#eee 25%,#ddd,#eee 75%);background-size:200% 100%;animation:shimmer 1.5s ease-in-out infinite}.request-grid .skeleton-cell-bar{width:28px}.request-grid .ghost-row{cursor:pointer}.request-grid .ghost-row .grid-cell{background:#f5f5f5;border-bottom:1px dashed #e0e0e0}.request-grid .ghost-row .ghost-label{font-size:.75rem;font-style:italic;color:#666}.request-grid .ghost-row .ghost-toggle .fas{font-size:.67rem;color:#888}.request-grid .ghost-row:hover .grid-cell{background:#efefef}.request-grid .capacity-current-only{font-size:.8rem;color:#003179}.request-grid .capacity-current-only.capacity-negative{color:#b60000}.request-grid .row-agreement .grid-cell{background:#eff5ff}.request-grid .row-agreement .agency-cell{padding-top:3px;padding-bottom:3px;align-items:center;white-space:normal}.request-grid .row-agreement .day-cell,.request-grid .row-non-agreed .day-cell{pointer-events:none}.request-grid .agr-badge{display:inline-flex;align-items:center;align-self:center;flex:0 0 auto;margin-right:6px;padding:1px 7px;border-radius:10px;font-size:.67rem;font-weight:600;line-height:1.4;color:#0050c7;background:#dce9f9}.request-grid .agreement-label{display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden}.request-grid .agreement-ep{display:block;max-width:100%;line-height:1.1;font-size:.75rem;color:#003179;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.request-grid .agreement-criteria{display:block;max-width:100%;line-height:1.1;font-size:.67rem;color:#0050c7;white-space:normal;overflow-wrap:anywhere}.request-grid .row-non-agreed .grid-cell{background:#fafafa}.request-grid .row-non-agreed .non-agreed-label{font-style:italic;text-transform:capitalize;color:#666;min-width:72px}.request-grid .capacity-unset{color:#666}.request-grid .row-agreement-ghost{cursor:pointer}.request-grid .row-agreement-hidden .agency-cell{opacity:.75}.request-grid .row-agreement-hidden .agr-badge{color:#666;background:#fafafa}.request-grid .agr-tooltip{position:fixed;z-index:500;min-width:200px;max-width:280px;padding:10px 12px;background:#fff;border:1px solid #c7deff;border-radius:7px;box-shadow:0 4px 14px #0031791f;pointer-events:none}.request-grid .agr-tooltip-head{margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid #e8e8e8;font-size:.67rem;font-weight:600;color:#003179}.request-grid .agr-tooltip-row{display:flex;justify-content:space-between;gap:12px;margin-bottom:3px;font-size:.75rem}.request-grid .agr-tooltip-row:last-child{margin-bottom:0}.request-grid .agr-tooltip-key{color:#0050c7}.request-grid .agr-tooltip-val{font-weight:500;color:#00193e;text-align:right}.request-grid .info-icon{margin-left:6px;color:#2a80ff;font-size:.75rem;cursor:help}.request-grid .hidden-agency .grid-cell{background:#fafafa;color:#aaa}.request-grid .hidden-agency .agency-name{color:#aaa;font-style:italic}@keyframes shimmer{0%{background-position:200% 0}to{background-position:-200% 0}}.mat-drawer-content:has(.request-grid){height:100vh;overflow-y:hidden}@media(max-width:768px){.mat-drawer-content:has(.request-grid){height:100vh;overflow-y:auto}}.mat-drawer.mat-drawer-opened{z-index:5!important}
+
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <span>Home</span> / <span>Request</span> / <span class="current">Request Grid</span>
+</div>
+
+<div id="search-request-grid-criteria" class="request-grid">
+  <div class="filter-panel-simple">
+    <div class="filter-field-simple"><label>Region</label><select id="fRegion" onchange="onRegionChange()"><option value="">Select...</option><option value="victoria" selected>Victoria</option></select></div>
+    <div class="filter-field-simple"><label>Status</label><input value="Pending" disabled></div>
+    <button class="btn-refresh" onclick="loadGrid()">Refresh</button>
+  </div>
+  <div class="grid-count-indicator" id="gridCountIndicator">Showing 0 Pending of 0 Requests</div>
+
+  <div class="grid-toolbar">
+    <div class="toolbar-left">
+      <span class="toolbar-label" style="font-weight:600;color:#003179">15 Sep 2026</span>
+      <span class="divider"></span>
+      <div class="show-control"><span class="toolbar-label">Show</span><button type="button" class="show-chip">Placements</button></div>
+      <span class="divider"></span>
+      <div class="group-by-control">
+        <span class="toolbar-label">Group availability by</span>
+        <select class="group-by-field is-none" id="groupAvailBy" title="Groups the availability/capacity rows only (region/facility/department/ward) - does not affect how requests are displayed">
+          <option value="none" selected>None</option>
+          <option value="region">Region</option>
+          <option value="facility">Facility</option>
+          <option value="department">Department</option>
+          <option value="ward">Ward</option>
+        </select>
+      </div>
+      <span class="divider"></span>
+      <div class="group-by-control">
+        <span class="toolbar-label">Group requests by</span>
+        <select class="group-by-field" id="groupReqBy" onchange="onGroupReqByChange(this.value)">
+          <option value="none">None</option>
+          <option value="ep" selected>EP</option>
+          <option value="ep_campus">EP &amp; Campus</option>
+        </select>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <div class="rag-legend">
+        <span class="rag-leg-item"><span class="rag-leg-dot rag-green"></span>Fits</span>
+        <span class="rag-leg-item"><span class="rag-leg-dot rag-amber"></span>Partial</span>
+        <span class="rag-leg-item"><span class="rag-leg-dot rag-red"></span>No capacity</span>
+      </div>
+      <button class="expand-all-btn" onclick="toggleExpandAll()" id="expandAllBtn">Expand</button>
+    </div>
+  </div>
+
+  <div class="grid-table" id="gridTable" role="grid">
+    <div class="grid-row grid-header" role="row" id="gridHeaderRow"></div>
+    <div class="grid-viewport" id="gridViewport"></div>
+  </div>
+</div>
+
+<div id="reqTooltip">
+  <div class="tt-head"><span class="tt-id" id="ttId"></span><span class="tt-sbadge" id="ttStatus"></span></div>
+  <div class="tt-row" id="ttEPRow"><span class="tt-lbl">EP / Campus</span><span class="tt-val" id="ttEP"></span></div>
+  <div class="tt-row"><span class="tt-lbl">Discipline</span><span class="tt-val" id="ttDisc"></span></div>
+  <div class="tt-row"><span class="tt-lbl">Placement Type</span><span class="tt-val" id="ttType"></span></div>
+  <div class="tt-row"><span class="tt-lbl">Year Level</span><span class="tt-val" id="ttYear"></span></div>
+  <div class="tt-row" id="ttQtyRow"><span class="tt-lbl">Number of Placements</span><span class="tt-val" id="ttQty"></span></div>
+  <div class="tt-row"><span class="tt-lbl">Duration</span><span class="tt-val" id="ttDur"></span></div>
+  <div class="tt-row"><span class="tt-lbl">Date Range</span><span class="tt-val" id="ttDates"></span></div>
+  <div class="tt-progress" id="ttProgressWrap" style="display:none">
+    <div class="tt-progress-bar"><span class="tt-progress-fill" id="ttProgressFill" style="width:0%"></span></div>
+    <div class="tt-progress-labels"><span id="ttAllocatedLbl"></span><span id="ttRemainingLbl"></span></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   Data — Victoria region, matching real production values where
+   captured in the QA DOM dump (RG_QA.txt). R-100546 is the real,
+   currently-broken Any (qty:0) request. A second Any request is
+   added into the real "ACU 2 Requests" group under 03-2300 to
+   demonstrate the shared-group amber case on real data.
+   ============================================================ */
+const BASE = new Date(2026, 8, 15); // 15 Sep 2026
+const DAYS = 28;
+const CAP_VIC = [709,720,715,727,117,123,696,701,705,705,706,116,122,714,715,719,707,708,116,118,693,695,700,699,701,111,123,694];
+
+function isWknd(d){ const g=d.getDay(); return g===0||g===6; }
+function getDate(i){ const d=new Date(BASE); d.setDate(d.getDate()+i); return d; }
+function fmtDate(d){ return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`; }
+function fmtDow(d){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]; }
+function parseDMY(s){ const [dd,mm,yyyy]=s.split('/').map(Number); return new Date(yyyy,mm-1,dd); }
+function parseRange(dates){
+  if(!dates) return null;
+  const [a,b]=dates.split(' - ');
+  return { start: parseDMY(a.trim()), end: parseDMY(b.trim()) };
+}
+
+const AGENCIES = [
+  { id:'sa-c', name:'(SA) Agency C',
+    caps:[22,33,23,33,3,3,5,5,5,5,5,null,null,10,10,10,-2,-2,null,null,-3,-3,-3,-3,-3,null,null,-3],
+    reqs: [
+      {id:'r100165', reqNum:'R-100165', ep:'ACU', campus:'Adelaide', qty:3, allocated:2,
+       discipline:'Nursing', type:'General Medical', year:'Yr 2', dur:'', dates:'01/09/2026 - 31/10/2026'},
+      {id:'r100425', reqNum:'R-100425', ep:'Canberra', campus:'Other', qty:4, allocated:3,
+       discipline:'Nursing', type:'General Medical', year:'Yr 2', dur:'', dates:'01/09/2026 - 31/10/2026'},
+    ] },
+  { id:'g03', name:'03-2300',
+    caps:[1,1,0,1,7,12,3,0,0,-1,0,7,12,3,0,0,4,5,7,12,6,6,5,4,6,7,12,8],
+    reqs: [
+      {id:'r100396', reqNum:'R-100396', ep:'ACU', campus:'Adelaide', qty:7, allocated:4,
+       discipline:'Midwifery', type:'Antenatal', year:'Yr 2', dur:'10 Day(s)', dates:'01/09/2026 - 31/12/2026'},
+      {id:'r100397', reqNum:'R-100397', ep:'ACU', campus:'Adelaide', qty:4, allocated:1,
+       discipline:'Nursing', type:'General Medical', year:'Yr 2', dur:'', dates:'01/09/2026 - 31/12/2026'},
+      // Demo: a second Any request joining the real ACU group above.
+      // Real sum on active days is 3 (7-4) + 3 (4-1) = 6 -> aggregate should
+      // read "6+" once this is added; needed for colour purposes becomes
+      // 6 + 1 (this request) = 7, compared against 03-2300's real capacity.
+      {id:'r-any-acu-join', reqNum:'R-95301', ep:'ACU', campus:'Adelaide', qty:0, allocated:0,
+       discipline:'Nursing', type:'General Medical', year:'Yr 2', dur:'', dates:'01/09/2026 - 31/12/2026',
+       comment:'Demo: open-ended request joining the real ACU group'},
+      // R-100546 — the real, currently-broken Any request from production
+      // (QA dump shows "0/0", plain "0" day cells, no RAG colour at all).
+      {id:'r100546', reqNum:'R-100546', ep:'Canberra', campus:'Other', qty:0, allocated:0,
+       discipline:'Nursing', type:'General Medical', year:'Yr 2', dur:'', dates:'15/09/2026 - 31/10/2026'},
+      // Demo: same Canberra Any request shape, but already 5/Any — shows the
+      // hover tooltip's "5 of Any placements processed" state, and the
+      // ellipsis menu's "Close request" (since something's now allocated).
+      {id:'r-any-5-progress', reqNum:'R-95302', ep:'Canberra', campus:'Other', qty:0, allocated:5,
+       discipline:'Nursing', type:'General Medical', year:'Yr 2', dur:'', dates:'01/09/2026 - 31/12/2026',
+       comment:'Demo: open-ended request already 5/Any allocated'},
+    ] },
+];
+
+const REQ_META = {};
+AGENCIES.forEach(ag => ag.reqs.forEach(r => { REQ_META[r.id] = r; r._agencyId = ag.id; }));
+
+let groupReqBy = 'ep';       // none | ep | ep_campus
+let expandedAgencies = {};   // id -> bool
+let expandedEpGroups = {};   // key -> bool
+let allExpanded = false;
+let _activeReqMenu = null;
+
+function onRegionChange(){ loadGrid(); }
+function loadGrid(){ render(); }
+function toggleAgency(id){ expandedAgencies[id] = !expandedAgencies[id]; render(); }
+function toggleEp(key){ expandedEpGroups[key] = !expandedEpGroups[key]; render(); }
+function onGroupReqByChange(val){ groupReqBy = val; render(); }
+function toggleExpandAll(){
+  allExpanded = !allExpanded;
+  expandedAgencies = {}; expandedEpGroups = {};
+  document.getElementById('expandAllBtn').textContent = allExpanded ? 'Collapse' : 'Expand';
+  render();
+}
+function isAgencyExpanded(id){ return id in expandedAgencies ? expandedAgencies[id] : allExpanded; }
+function isEpExpanded(key){ return key in expandedEpGroups ? expandedEpGroups[key] : allExpanded; }
+
+function getCapacityForRequest(agency, dayIdx){ return agency.caps ? agency.caps[dayIdx] : null; }
+
+/* Shared pool tracking not needed in Request Grid — no allocate action here,
+   only "Process" (navigates to Process Request, where the shared 100-pool
+   logic already lives). RG's scope is display + Reassign/Close only. */
+
+function requestOpen(r){ return (r.qty||0) - (r.allocated||0); }
+function requestIsAny(r){ return (r.qty||0) === 0; }
+function requestHasCellOnDay(r, i){
+  const range = parseRange(r.dates);
+  if(!range) return true;
+  const d = getDate(i);
+  return d >= range.start && d <= range.end;
+}
+
+function renderHeader(){
+  let h = `<div role="columnheader" class="grid-cell agency-cell agency-header">Agency</div>`;
+  for(let i=0;i<DAYS;i++){
+    const d = getDate(i);
+    h += `<div role="columnheader" class="grid-cell date-header${isWknd(d)?' weekend':''}"><span class="date-primary">${fmtDate(d)}</span><span class="date-secondary">${fmtDow(d)}</span></div>`;
+  }
+  document.getElementById('gridHeaderRow').innerHTML = h;
+  document.getElementById('gridHeaderRow').setAttribute('style', `--col-count:${DAYS}`);
+  document.getElementById('gridTable').style.setProperty('--col-count', DAYS);
+}
+
+function renderRegionRow(){
+  let h = `<div role="row" class="grid-row row-region"><div role="rowheader" class="grid-cell agency-cell" style="padding-left:8px"><span class="agency-name has-children" title="Victoria">Victoria</span></div>`;
+  for(let i=0;i<DAYS;i++){
+    const wknd = isWknd(getDate(i));
+    const v = CAP_VIC[i];
+    h += `<div role="gridcell" class="grid-cell day-cell${wknd?' weekend':''}"><span class="capacity-current-only${v===0?' capacity-zero':''}">${v}</span></div>`;
+  }
+  return h + '</div>';
+}
+
+function renderAgencyRow(ag){
+  const hasReqs = ag.reqs.length > 0;
+  const expanded = hasReqs && isAgencyExpanded(ag.id);
+  const toggle = hasReqs
+    ? `<button type="button" class="toggle-btn" onclick="toggleAgency('${ag.id}')"><i class="fas fa-chevron-down${expanded?'':' collapsed'}"></i></button>`
+    : `<span aria-hidden="true" class="toggle-btn toggle-disabled"><i class="fas fa-chevron-down"></i></span>`;
+  let h = `<div role="row" class="grid-row row-undefined"><div role="rowheader" class="grid-cell agency-cell" style="padding-left:8px">${toggle}<span class="agency-name${hasReqs?' has-children':''}" title="${ag.name}">${ag.name}</span></div>`;
+  for(let i=0;i<DAYS;i++){
+    const wknd = isWknd(getDate(i));
+    const v = ag.caps ? ag.caps[i] : null;
+    h += `<div role="gridcell" class="grid-cell day-cell${wknd?' weekend':''}">${v===null||v===undefined?'':`<span class="capacity-current-only${v===0?' capacity-zero':''}">${v}</span>`}</div>`;
+  }
+  h += '</div>';
+  if(expanded){
+    if(groupReqBy === 'none'){
+      // No EP grouping row at all — requests sit directly under the agency,
+      // one indent level in (matches production's "None" behaviour).
+      ag.reqs.forEach(r => { h += renderRequestRow(r, 24); });
+    } else if(groupReqBy === 'ep_campus'){
+      h += renderEpGroups(ag, true);
+    } else {
+      h += renderEpGroups(ag, false);
+    }
+  }
+  return h;
+}
+
+function renderEpGroups(ag, byCampus){
+  const byEp = {};
+  ag.reqs.forEach(r => { (byEp[r.ep] = byEp[r.ep] || []).push(r); });
+  let h = '';
+  Object.keys(byEp).sort().forEach(epName => {
+    const group = byEp[epName];
+    const key = ag.id + '::' + epName;
+    const expanded = isEpExpanded(key);
+    // Real sum across sized requests active that day, tracking whether the
+    // group contains an Any (qty:0) request separately — confirmed rules:
+    // displayed number = real sum (floored to 1 only if the group is
+    // Any-only and would otherwise be 0); needed-for-colour = real sum + 1
+    // per Any request in the group; "+" suffix whenever the group has one.
+    const dayCounts = Array(DAYS).fill(0);
+    const hasAnyOnDay = Array(DAYS).fill(false);
+    group.forEach(r => {
+      const isAny = requestIsAny(r);
+      for(let i=0;i<DAYS;i++){
+        if(!requestHasCellOnDay(r,i)) continue;
+        if(isAny) hasAnyOnDay[i] = true;
+        else dayCounts[i] += Math.max(requestOpen(r),0);
+      }
+    });
+    h += `<div role="row" class="grid-row row-ep-group"><div role="rowheader" class="grid-cell agency-cell" style="padding-left:24px"><button type="button" class="toggle-btn" onclick="toggleEp('${key}')"><i class="fas fa-chevron-down${expanded?'':' collapsed'}"></i></button><span class="agency-name ep-name" title="${epName}">${epName}</span><span class="ep-count">${group.length} Request${group.length!==1?'s':''}</span></div>`;
+    for(let i=0;i<DAYS;i++){
+      const wknd = isWknd(getDate(i));
+      const v = dayCounts[i];
+      const dayHasAny = hasAnyOnDay[i];
+      if(v > 0 || dayHasAny){
+        const neededForColour = v + (dayHasAny ? 1 : 0);
+        const cap = ag.caps ? ag.caps[i] : null;
+        let ragCls = '';
+        if(cap !== null && cap !== undefined){
+          if(cap <= 0) ragCls = ' rag-red';
+          else if(cap >= neededForColour) ragCls = ' rag-green';
+          else ragCls = ' rag-amber';
+        }
+        const displayVal = dayHasAny ? Math.max(v,1) : v;
+        h += `<div role="gridcell" class="grid-cell day-cell ep-group-cell${ragCls}${wknd?' weekend':''}"><span class="ep-day-count">${displayVal}${dayHasAny?'+':''}</span></div>`;
+      } else {
+        h += `<div role="gridcell" class="grid-cell day-cell ep-group-cell${wknd?' weekend':''}"></div>`;
+      }
+    }
+    h += '</div>';
+    if(expanded){
+      if(byCampus){
+        const byCampusMap = {};
+        group.forEach(r => { (byCampusMap[r.campus||'—'] = byCampusMap[r.campus||'—'] || []).push(r); });
+        Object.keys(byCampusMap).sort().forEach(campusName => {
+          const campusReqs = byCampusMap[campusName];
+          const campusKey = key + '::' + campusName;
+          const campusExpanded = isEpExpanded(campusKey);
+          h += `<div role="row" class="grid-row row-campus-group"><div role="rowheader" class="grid-cell agency-cell" style="padding-left:40px"><button type="button" class="toggle-btn" onclick="toggleEp('${campusKey}')"><i class="fas fa-chevron-down${campusExpanded?'':' collapsed'}"></i></button><span class="agency-name campus-name" title="${campusName}">${campusName}</span><span class="ep-count">${campusReqs.length} Request${campusReqs.length!==1?'s':''}</span></div>${Array(DAYS).fill('<div role="gridcell" class="grid-cell day-cell ep-group-cell"></div>').join('')}</div>`;
+          if(campusExpanded) campusReqs.forEach(r => { h += renderRequestRow(r, 56); });
+        });
+      } else {
+        group.forEach(r => { h += renderRequestRow(r, 43); });
+      }
+    }
+  });
+  return h;
+}
+
+function renderRequestRow(r, padLeft){
+  padLeft = padLeft || 43;
+  const isAny = requestIsAny(r);
+  const open = requestOpen(r);
+  const label1 = isAny ? `${r.allocated||0}/Any` : `${r.allocated||0}/${r.qty}`;
+  const studentPart = r.reqType==='student' && r.studentName ? `<span class="request-student ng-star-inserted"> · ${r.studentName}</span>` : '';
+  let h = `<div role="row" class="grid-row row-request"><div role="rowheader" class="grid-cell agency-cell request-cell" style="padding-left:${padLeft}px">
+    <div class="request-label"><div class="request-line-1"><span class="request-line-1-main">
+      <span class="request-badge" data-rid="${r.id}" onmouseenter="onChipEnter(event,'${r.id}')" onmouseleave="onChipLeave()">${r.reqNum}</span>
+      <span class="request-qty"> · ${label1}</span>${studentPart}
+      <span class="request-date"> · ${r.dates}</span>
+    </span><span class="pending status-pill">Pending</span></div></div>
+    <div class="request-row-actions" style="visibility:visible;display:flex;gap:4px;align-items:center;justify-content:flex-end;margin-left:auto">
+      <button type="button" class="primary-action-button" style="height:22px;padding:0 8px;font-size:.75rem;background:#003179;color:#fff;border:none;border-radius:4px;cursor:pointer" onclick="reqPrimaryAction('${r.id}')">Process</button>
+      <button type="button" class="secondary-actions" style="width:20px;height:20px;border:none;background:transparent;cursor:pointer;border-radius:4px" onclick="toggleReqMenu(event,'${r.id}')" aria-label="More Actions">&#8942;</button>
+    </div>
+  </div>`;
+  for(let i=0;i<DAYS;i++){
+    const wknd = isWknd(getDate(i));
+    const hasCell = requestHasCellOnDay(r,i);
+    let cellText = '';
+    let ragCls = '';
+    if(hasCell && (isAny || open > 0)){
+      cellText = isAny ? 'Any' : `${open}`;
+      const agency = AGENCIES.find(a => a.id === r._agencyId);
+      const cap = getCapacityForRequest(agency, i);
+      const neededHere = isAny ? 1 : open;
+      if(cap !== null && cap !== undefined){
+        if(cap <= 0) ragCls = ' rag-red';
+        else if(cap >= neededHere) ragCls = ' rag-green';
+        else ragCls = ' rag-amber';
+      }
+    }
+    h += `<div role="gridcell" class="grid-cell day-cell request-day-cell${ragCls}${wknd?' weekend':''}${cellText?' clickable':''}">${cellText?`<span class="request-chip">${cellText}</span>`:''}</div>`;
+  }
+  return h + '</div>';
+}
+
+function render(){
+  renderHeader();
+  let h = renderRegionRow();
+  AGENCIES.forEach(ag => { h += renderAgencyRow(ag); });
+  document.getElementById('gridViewport').innerHTML = h;
+  updateCountIndicator();
+}
+
+function updateCountIndicator(){
+  const total = Object.keys(REQ_META).length;
+  document.getElementById('gridCountIndicator').textContent = `Showing ${total} Pending of ${total} Requests`;
+}
+
+/* ─── Ellipsis menu — real production wording (Edit request / Reassign
+   remaining / Reject entire request / Reject remaining request / Add
+   comment). Any requests: once allocated>0, "Reject remaining request"
+   becomes "Close request" in this same slot — confirmed Sep 14 catch-up.
+   ─── */
+function buildEllipsisItems(r){
+  const isAny = requestIsAny(r);
+  const showClose = isAny && (r.allocated||0) > 0;
+  const items = [
+    {label:'Edit request', action:'edit'},
+    {label:'Reassign remaining', action:'reassign'},
+    {label:'Reject entire request', action:'reject-entire', danger:true},
+  ];
+  items.push(showClose
+    ? {label:'Close request', action:'close-request'}
+    : {label:'Reject remaining request', action:'reject-remaining', danger:true});
+  items.push({label:'Add comment', action:'comment'});
+  return items;
+}
+
+function toggleReqMenu(e, reqId){
+  e.stopPropagation();
+  if(_activeReqMenu){ _activeReqMenu.remove(); _activeReqMenu=null; return; }
+  const r = REQ_META[reqId];
+  const btn = e.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.className = 'req-ctx-menu';
+  buildEllipsisItems(r).forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'req-ctx-menu-item' + (item.danger?' danger':'');
+    el.textContent = item.label;
+    el.onclick = (ev) => {
+      ev.stopPropagation();
+      if(item.action === 'close-request'){
+        showToast(`Closed — ${r.reqNum} moved to Allocated (${r.allocated} processed).`);
+      } else if(item.action === 'reassign'){
+        openReassignPanel(r);
+      } else {
+        showToast(`${item.label}: ${r.reqNum}`);
+      }
+      menu.remove(); _activeReqMenu=null;
+    };
+    menu.appendChild(el);
+  });
+  menu.style.position='fixed';
+  menu.style.top=(rect.bottom+2)+'px';
+  menu.style.left=Math.min(rect.left, window.innerWidth-210)+'px';
+  document.body.appendChild(menu);
+  _activeReqMenu = menu;
+}
+document.addEventListener('click', ()=>{ if(_activeReqMenu){ _activeReqMenu.remove(); _activeReqMenu=null; } });
+
+function reqPrimaryAction(reqId){ showToast(`Process: navigates to Process Request for ${REQ_META[reqId].reqNum}`); }
+
+/* Reassign — Any requests: no quantity field (whole request moves), new
+   request created at qty:1, original closes to Rejected (0 allocated) or
+   Allocated (>=1 allocated) — matches Process Request exactly. */
+function openReassignPanel(r){
+  const isAny = requestIsAny(r);
+  if(isAny){
+    const hadAllocations = (r.allocated||0) > 0;
+    const msg = hadAllocations
+      ? `Reassigned — ${r.reqNum} is now Allocated. A new request (qty 1) would be created at the destination agency.`
+      : `Reassigned — ${r.reqNum} is now Rejected (nothing had been allocated). A new request (qty 1) would be created at the destination agency.`;
+    showToast(msg);
+  } else {
+    showToast(`Reassign remaining: ${r.reqNum} (${requestOpen(r)} remaining)`);
+  }
+}
+
+function showToast(msg){
+  let t = document.getElementById('rgToast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'rgToast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#00193e;color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;z-index:3000;max-width:420px;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(()=>{ t.style.opacity='0'; }, 3500);
+}
+
+/* ─── Hover tooltip — Any requests: "Number of Placements" reads Any, the
+   bar/text matches Process Request's confirmed wording ("N of Any
+   placements processed"), and the "remaining" caption is dropped entirely
+   (undefined for an open-ended request). ─── */
+const tooltip = document.getElementById('reqTooltip');
+let hideTimer = null;
+function onChipEnter(e, reqId){
+  clearTimeout(hideTimer);
+  const r = REQ_META[reqId];
+  if(!r) return;
+  const isAny = requestIsAny(r);
+  document.getElementById('ttId').textContent = r.reqNum;
+  const sb = document.getElementById('ttStatus'); sb.textContent = 'Pending';
+  document.getElementById('ttEPRow').style.display = r.reqType==='student' ? 'none' : '';
+  document.getElementById('ttEP').textContent = `${r.ep} · ${r.campus}`;
+  document.getElementById('ttDisc').textContent = r.discipline;
+  document.getElementById('ttType').textContent = r.type;
+  document.getElementById('ttYear').textContent = r.year;
+  document.getElementById('ttQtyRow').style.display = r.reqType==='student' ? 'none' : '';
+  document.getElementById('ttQty').textContent = isAny ? 'Any' : r.qty;
+  document.getElementById('ttDur').textContent = r.dur || '—';
+  document.getElementById('ttDates').textContent = r.dates;
+
+  const progressWrap = document.getElementById('ttProgressWrap');
+  const remainingLbl = document.getElementById('ttRemainingLbl');
+  if(isAny && r.allocated > 0){
+    document.getElementById('ttProgressFill').style.width = '100%';
+    document.getElementById('ttAllocatedLbl').textContent = `${r.allocated} of Any placements processed`;
+    remainingLbl.style.display = 'none';
+    progressWrap.style.display = '';
+  } else if(!isAny && r.allocated > 0 && r.allocated < r.qty){
+    const remaining = r.qty - r.allocated;
+    const pct = Math.round((r.allocated / r.qty) * 100);
+    document.getElementById('ttProgressFill').style.width = pct+'%';
+    document.getElementById('ttAllocatedLbl').textContent = `${r.allocated} of ${r.qty} allocated`;
+    remainingLbl.textContent = `${remaining} remaining`;
+    remainingLbl.style.display = '';
+    progressWrap.style.display = '';
+  } else {
+    progressWrap.style.display = 'none';
+  }
+  posTooltip(e);
+  tooltip.classList.add('visible');
+}
+function onChipLeave(){ hideTimer = setTimeout(()=>tooltip.classList.remove('visible'), 300); }
+tooltip.addEventListener('mouseenter', ()=>clearTimeout(hideTimer));
+tooltip.addEventListener('mouseleave', ()=>{ hideTimer = setTimeout(()=>tooltip.classList.remove('visible'), 150); });
+function posTooltip(e){
+  const TW=280, TH=260, vw=window.innerWidth, vh=window.innerHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if(x+TW > vw-8) x = e.clientX - TW - 10;
+  if(y+TH > vh-8) y = e.clientY - TH - 10;
+  tooltip.style.left = x+'px'; tooltip.style.top = y+'px';
+}
+
+// Default: EP grouping expanded for the two demo agencies so the fixes are visible on load
+expandedAgencies = { 'sa-c': true, 'g03': true };
+expandedEpGroups = { 'g03::ACU': true, 'g03::Canberra': true };
+render();
+</script>
+</body>
+</html>
